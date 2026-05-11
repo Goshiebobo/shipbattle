@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Battles Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .stage {
+            display: none;
+        }
+        .stage.active {
+            display: block;
+        }
+        .team-selection {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .team {
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            width: 45%;
+        }
+        .team.allied {
+            border-color: #4CAF50;
+        }
+        .team.enemy {
+            border-color: #f44336;
+        }
+        .player {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .ready-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .player.current {
+            border: 2px solid #2196F3;
+            background-color: #e3f2fd;
+        }
+        .cp-input {
+            margin: 20px 0;
+        }
+        .cp-input label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .cp-input input {
+            width: 100px;
+            padding: 5px;
+        }
+        .invite-link {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e7e7e7;
+            border-radius: 4px;
+        }
+        .ship-selection {
+            margin: 20px 0;
+        }
+        .ship {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .ship.selected {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .formation-select {
+            margin: 20px 0;
+        }
+        .game-board {
+            display: flex;
+            justify-content: space-between;
+        }
+        .team-box {
+            width: 48%;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .team-box.allied {
+            border-color: #4CAF50;
+        }
+        .team-box.enemy {
+            border-color: #f44336;
+        }
+        .ship-stats {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .initiative {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .turn {
+            margin: 20px 0;
+        }
+        .action-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .action-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fleet Battles</h1>
+
+        <!-- Pregame Stage -->
+        <div id="pregame" class="stage active">
+            <h2>Pregame Lobby</h2>
+            <div class="invite-link">
+                <strong>Invite Link:</strong> <span id="invite-link">http://localhost:3000/?room=game1</span>
+            </div>
+            <div class="cp-input">
+                <label for="command-points">Command Points (default 20):</label>
+                <input type="number" id="command-points" value="20" min="1">
+            </div>
+            <div class="team-selection">
+                <div class="team allied">
+                    <h3>Allied Team</h3>
+                    <div id="allied-players"></div>
+                    <button class="ready-btn" onclick="joinTeam('allied')">Join Allied</button>
+                </div>
+                <div class="team enemy">
+                    <h3>Enemy Team</h3>
+                    <div id="enemy-players"></div>
+                    <button class="ready-btn" onclick="joinTeam('enemy')">Join Enemy</button>
+                </div>
+            </div>
+            <div id="ready-status">Players Ready: 0/0</div>
+            <button class="ready-btn" id="ready-btn" onclick="toggleReady()" disabled>Ready</button>
+        </div>
+
+        <!-- Ship Selection Stage -->
+        <div id="ship-selection" class="stage">
+            <h2>Ship Selection</h2>
+            <p>Available Ships:</p>
+            <div class="ship-selection">
+                <div class="ship" data-type="light" data-cp="4" onclick="selectShip(this)">
+                    <strong>Halcyon Class Light Cruiser</strong><br>
+                    Type: Light<br>
+                    CP Cost: 4<br>
+                    Hull: 100<br>
+                    Shields: 100<br>
+                    Armor: 15<br>
+                    Movement: 3<br>
+                    Weapons: Point Defence Guns (20), Coilguns (20)
+                </div>
+                <div class="ship" data-type="stealth" data-cp="5" onclick="selectShip(this)">
+                    <strong>HEKAR Class Blockade Runner</strong><br>
+                    Type: Stealth<br>
+                    CP Cost: 5<br>
+                    Hull: 80<br>
+                    Shields: 80<br>
+                    Armor: 15<br>
+                    Movement: 4<br>
+                    Weapons: Pulse Lasers (30)
+                </div>
+            </div>
+            <div class="formation-select">
+                <label for="formation">Formation:</label>
+                <select id="formation">
+                    <option value="halberd">Halberd Formation</option>
+                </select>
+            </div>
+            <p>Selected Ships: <span id="selected-ships">None</span></p>
+            <p>Total CP Used: <span id="total-cp">0</span></p>
+            <button class="ready-btn" onclick="confirmShips()">Confirm Ships</button>
+        </div>
+
+        <!-- Game Stage -->
+        <div id="game" class="stage">
+            <h2>Battle Phase</h2>
+            <div class="initiative">
+                <h3>Initiative Rolls</h3>
+                <div id="initiative-results"></div>
+                <button class="action-btn" onclick="rollInitiative()">Roll Initiative</button>
+            </div>
+            <div class="game-board">
+                <div class="team-box allied">
+                    <h3>Allied Fleet</h3>
+                    <div id="allied-ships"></div>
+                </div>
+                <div class="team-box enemy">
+                    <h3>Enemy Fleet</h3>
+                    <div id="enemy-ships"></div>
+                </div>
+            </div>
+            <div class="turn">
+                <h3>Current Turn: <span id="current-player">None</span></h3>
+                <div id="actions"></div>
+                <button class="action-btn" onclick="endTurn()">End Turn</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let players = [];
+        let currentPlayer = null;
+        let gameState = 'pregame';
+        let commandPoints = 20;
+        let selectedShips = [];
+        let formations = ['halberd'];
+        let initiativeOrder = [];
+        let phase = 0;
+
+        // Ship data
+        const ships = {
+            halcyon: {
+                name: 'Halcyon Class Light Cruiser',
+                type: 'light',
+                cp: 4,
+                hull: 100,
+                shields: 100,
+                armor: 15,
+                movement: 3,
+                weapons: ['Point Defence Guns (20)', 'Coilguns (20)']
+            },
+            hekar: {
+                name: 'HEKAR Class Blockade Runner',
+                type: 'stealth',
+                cp: 5,
+                hull: 80,
+                shields: 80,
+                armor: 15,
+                movement: 4,
+                weapons: ['Pulse Lasers (30)']
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUI();
+        });
+
+        function addPlayer(name, team) {
+            players.push({
+                name: name,
+                team: team,
+                ready: false,
+                ships: [],
+                formation: 'halberd'
+            });
+        }
+
+        function joinTeam(team) {
+            // For demo, add current player
+            const playerName = prompt('Enter your name:');
+            if (playerName) {
+                addPlayer(playerName, team);
+                currentPlayer = players[players.length - 1];
+                updateUI();
+            }
+        }
+
+        function toggleReady() {
+            if (currentPlayer) {
+                currentPlayer.ready = !currentPlayer.ready;
+                updateUI();
+                checkAllReady();
+            }
+        }
+
+        function checkAllReady() {
+            const readyCount = players.filter(p => p.ready).length;
+            const totalPlayers = players.length;
+            document.getElementById('ready-status').textContent = `Players Ready: ${readyCount}/${totalPlayers}`;
+            if (readyCount === totalPlayers && totalPlayers >= 2) {
+                // Check teams
+                const alliedCount = players.filter(p => p.team === 'allied').length;
+                const enemyCount = players.filter(p => p.team === 'enemy').length;
+                if (alliedCount > 0 && enemyCount > 0) {
+                    setTimeout(() => {
+                        gameState = 'ship-selection';
+                        updateUI();
+                    }, 1000);
+                }
+            }
+        }
+
+        function selectShip(element) {
+            const shipType = element.dataset.type;
+            const cpCost = parseInt(element.dataset.cp);
+            if (selectedShips.some(s => s.type === shipType)) {
+                selectedShips = selectedShips.filter(s => s.type !== shipType);
+                element.classList.remove('selected');
+            } else {
+                const totalCP = selectedShips.reduce((sum, s) => sum + s.cp, 0) + cpCost;
+                if (totalCP <= commandPoints) {
+                    selectedShips.push({ ...ships[shipType], type: shipType });
+                    element.classList.add('selected');
+                } else {
+                    alert('Not enough command points!');
+                }
+            }
+            updateSelectedShips();
+        }
+
+        function updateSelectedShips() {
+            const selectedNames = selectedShips.map(s => s.name).join(', ') || 'None';
+            document.getElementById('selected-ships').textContent = selectedNames;
+            const totalCP = selectedShips.reduce((sum, s) => sum + s.cp, 0);
+            document.getElementById('total-cp').textContent = totalCP;
+        }
+
+        function confirmShips() {
+            if (currentPlayer) {
+                currentPlayer.ships = selectedShips;
+                currentPlayer.formation = document.getElementById('formation').value;
+            }
+            // For demo, assign ships to other players
+            players.forEach(p => {
+                if (p !== currentPlayer && p.ships.length === 0) {
+                    p.ships = [ships.halcyon]; // Default ship
+                }
+            });
+            gameState = 'game';
+            updateUI();
+        }
+
+        function rollInitiative() {
+            initiativeOrder = players.map(p => ({
+                ...p,
+                roll: Math.floor(Math.random() * 100) + 1
+            })).sort((a, b) => b.roll - a.roll);
+            const results = initiativeOrder.map(p => `${p.name}: ${p.roll}`).join('<br>');
+            document.getElementById('initiative-results').innerHTML = results;
+            phase++;
+            startTurn();
+        }
+
+        function startTurn() {
+            if (initiativeOrder.length > 0) {
+                currentPlayer = initiativeOrder[0];
+                document.getElementById('current-player').textContent = currentPlayer.name;
+                // Display actions
+                const actionsDiv = document.getElementById('actions');
+                actionsDiv.innerHTML = '<button class="action-btn" onclick="attack()">Attack</button><button class="action-btn" onclick="useAbility()">Use Ability</button>';
+            }
+        }
+
+        function attack() {
+            alert(`${currentPlayer.name} attacks!`);
+            // Implement attack logic
+        }
+
+        function useAbility() {
+            alert(`${currentPlayer.name} uses ability!`);
+            // Implement ability logic
+        }
+
+        function endTurn() {
+            initiativeOrder.shift();
+            if (initiativeOrder.length === 0) {
+                // End phase, reroll initiative
+                rollInitiative();
+            } else {
+                startTurn();
+            }
+        }
+
+        function updateUI() {
+            // Hide all stages
+            document.querySelectorAll('.stage').forEach(s => s.classList.remove('active'));
+            // Show current stage
+            document.getElementById(gameState).classList.add('active');
+
+            // Update players
+            document.getElementById('allied-players').innerHTML = '';
+            document.getElementById('enemy-players').innerHTML = '';
+            players.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'player';
+                if (p === currentPlayer) {
+                    div.classList.add('current');
+                }
+                div.textContent = `${p.name} - ${p.ready ? 'Ready' : 'Not Ready'}`;
+                if (p.team === 'allied') {
+                    document.getElementById('allied-players').appendChild(div);
+                } else {
+                    document.getElementById('enemy-players').appendChild(div);
+                }
+            });
+
+            // Update command points
+            document.getElementById('command-points').value = commandPoints;
+
+            // Enable/disable ready button
+            document.getElementById('ready-btn').disabled = !currentPlayer;
+
+            // Update game board
+            if (gameState === 'game') {
+                updateGameBoard();
+            }
+        }
+
+        function updateGameBoard() {
+            document.getElementById('allied-ships').innerHTML = '';
+            document.getElementById('enemy-ships').innerHTML = '';
+            players.forEach(p => {
+                p.ships.forEach(ship => {
+                    const div = document.createElement('div');
+                    div.className = 'ship-stats';
+                    div.innerHTML = `
+                        <strong>${ship.name}</strong><br>
+                        Hull: ${ship.hull}<br>
+                        Shields: ${ship.shields}<br>
+                        Armor: ${ship.armor}<br>
+                        Movement: ${ship.movement}<br>
+                        Weapons: ${ship.weapons.join(', ')}
+                    `;
+                    if (p.team === 'allied') {
+                        document.getElementById('allied-ships').appendChild(div);
+                    } else {
+                        document.getElementById('enemy-ships').appendChild(div);
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
